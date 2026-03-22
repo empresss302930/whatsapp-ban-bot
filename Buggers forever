@@ -1,0 +1,71 @@
+const { Client } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
+const fs = require('fs');
+const path = require('path');
+const config = require('./config/config');
+const handleBanCommand = require('./commands/banCommand');
+const handleUnbanCommand = require('./commands/unbanCommand');
+const handleBanlistCommand = require('./commands/banlistCommand');
+const handleHelpCommand = require('./commands/helpCommand');
+const { isBanned } = require('./utils/banManager');
+const Storage = require('./utils/storage');
+const client = new Client();
+
+Storage.initializeBanlist();
+
+client.on('qr', (qr) => {
+    console.log('Scan this QR code with your WhatsApp:');
+    qrcode.generate(qr, {small: true});
+});
+
+client.on('ready', () => {
+    console.log('✅ WhatsApp Bot is ready!');
+    console.log('Bot Name:', config.BOT_NAME);
+    console.log('Version:', config.VERSION);
+});
+
+client.on('message', async (message) => {
+    try {
+        const chat = await message.getChat();
+        if (chat.isGroup) {
+            const text = message.body.toLowerCase().trim();
+            if (text.startsWith(config.BOT_PREFIX)) {
+                const command = text.split(' ')[0].substring(1);
+                const args = text.split(' ').slice(1);
+                switch(command) {
+                    case config.COMMANDS.BAN:
+                        await handleBanCommand(message, args);
+                        break;
+                    case config.COMMANDS.UNBAN:
+                        await handleUnbanCommand(message, args);
+                        break;
+                    case config.COMMANDS.BANLIST:
+                        await handleBanlistCommand(message);
+                        break;
+                    case config.COMMANDS.HELP:
+                        await handleHelpCommand(message);
+                        break;
+                    default:
+                        await message.reply(config.MESSAGES.INVALID_COMMAND);
+                }
+            }
+
+            const sender = await message.getContact();
+            const isSenderBanned = await isBanned(sender.id.user, chat.id._serialized);
+            if (isSenderBanned) {
+                await message.delete(true);
+                await chat.sendMessage(`⚠️ This user is banned. Their messages will be deleted.`);
+            }
+        }
+    } catch (error) {
+        console.error('Error processing message:', error);
+    }
+});
+
+client.initialize();
+
+process.on('SIGINT', () => {
+    console.log('\n✋ Shutting down bot...');
+    client.destroy();
+    process.exit(0);
+});
