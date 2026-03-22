@@ -1,0 +1,1 @@
+{"name": "whatsapp-ban-bot","version": "1.0.0","description": "A WhatsApp bot for banning users.","main": "index.js","scripts": {"test": "echo \"Error: no test specified\" && exit 1},"author": "empresss302930","license": "MIT","dependencies": {"whatsapp-web.js": "^1.15.0"}}
